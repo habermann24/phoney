@@ -33,8 +33,18 @@ describe PhoneNumber do
     end
     
     it "should output the correct canonical format" do
-      @pn.to_s.should == "+55 (12 34) 5678-9012"
+      @pn.to_s.should == "+55 (12 34) 5678-9012"      
     end
   end
+
+  describe "using a european number with an optional (0)" do
+    before(:each) do
+      @pn = PhoneNumber.new("+44 (0) 870 123 4567")
+    end
+    
+    it "should print optional zero in parenthesis" do
+      @pn.to_s.should =~ /\(0\)/
+    end
+  end	  
   
 end

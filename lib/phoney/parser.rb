@@ -23,9 +23,9 @@ class PhoneNumber
         prefix_code     = nil
         area_code       = nil
 
-        dialout_prefix  = get_dialout_prefix(phone_number, region)
-        national_prefix = get_national_prefix(phone_number, region)
         dialout_region  = get_dialout_region(phone_number, region)
+        dialout_prefix  = get_dialout_prefix(phone_number, region)
+        national_prefix = get_national_prefix(phone_number, region)        
         dialout_country = ''
         
         # No dialout prefix without a dialout region, and no dialout region without a prefix
@@ -40,10 +40,10 @@ class PhoneNumber
           prefix          = dialout_prefix.delete(' ') + dialout_region.country_code.to_s
           country_code    = dialout_region.country_code.to_s
           dialout_country = country_code
-        else
-          prefix  = national_prefix
-          prefix += dialout_prefix.delete(' ') unless(dialout_prefix.empty?)
         end
+        prefix  = (prefix || "") + dialout_prefix.delete(' ') unless (dialout_prefix.empty? || dialout_region)
+        prefix  = (prefix || "") + national_prefix
+        
         
         # strip the total prefix from the beginning of the number
         phone_number = phone_number[prefix.length..-1]
@@ -95,7 +95,7 @@ class PhoneNumber
             phone_number.gsub!(/c{1}/, "+#{dialout_country}")
           else
             phone_number.gsub!(/c{1}/, dialout_country)
-            phone_number = "#{dialout_prefix} #{phone_number}" unless dialout_prefix.empty?
+            phone_number = "#{dialout_prefix} #{phone_number}" unless dialout_prefix.empty?            
           end
         else
           # default formatting
@@ -103,7 +103,7 @@ class PhoneNumber
             if(dialout_country.empty?)
               phone_number = "+#{phone_number}"
             else
-              phone_number = "+#{dialout_country} #{phone_number}"
+              phone_number = "+#{dialout_country}#{" (" + national_prefix + ")" unless national_prefix.empty?} #{phone_number}"
             end
           else
             phone_number = "#{dialout_country} #{phone_number}" unless dialout_country.empty?
@@ -211,9 +211,11 @@ class PhoneNumber
         prefix = region.national_prefix
         national_prefix = ''
 
-        # in case we're not dialing out and the number starts with the national_prefix
-        if(!dialing_out?(string, region) && string =~ Regexp.new("^#{Regexp.escape(prefix)}"))
-          national_prefix = prefix
+        # in case the number starts with the national_prefix (with or without calling code)        
+        if (string.start_with?("+#{region.country_code}#{prefix}") || string.start_with?("#{prefix}"))
+          unless (region.dialout_prefixes.any? { |p| string.start_with?(p.delete('X ')) } )
+            national_prefix = prefix
+          end
         end
 
         national_prefix
